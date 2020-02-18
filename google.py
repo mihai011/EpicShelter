@@ -31,20 +31,40 @@ class Google_Drive():
 
 
     def list_files(self, page_size):
+        
+        items = []
 
-        results = self.service.files().list(pageSize=page_size, 
-            fields="nextPageToken, files(id, name)").execute()
+        if page_size == 0:
 
-        items = results.get('files', [])
+            page_token = None
+            while True:
+                
+                response = self.service.files().list(fields='nextPageToken, files(id, name)',
+                    pageToken=page_token).execute()
+
+                items += response.get('files', [])
+                
+                page_token = response.get('nextPageToken', None)
+                if page_token is None:
+                    break
+
+        else:
+
+            results = self.service.files().list(pageSize=page_size, 
+                fields="nextPageToken, files(id, name)").execute()
+
+            items = results.get('files', [])
 
         return items
+
+    
 
 if __name__ == "__main__":
 
     g = Google_Drive()
 
-    files = g.list_files(100)
+    files = g.list_files(0)
 
-    print(files)
+    print(len(files))
 
 
