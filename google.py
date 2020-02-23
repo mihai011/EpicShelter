@@ -105,10 +105,10 @@ class Google_Drive():
 
         while True:
             
-            response = self.service.files().list(fields='nextPageToken, files(id, name)',
+            response = self.service.files().list(fields='nextPageToken, files(id, name, mimeType)',
                 pageToken=page_token).execute()
 
-            all_items += [r['id'] for r in response.get('files', [])]
+            all_items += response.get('files', [])
             
             page_token = response.get('nextPageToken', None)
             if page_token is None:
@@ -129,7 +129,7 @@ class Google_Drive():
                 children += [r['id'] for r in children_response.get('files',[])]
                 pass
 
-            all_items = [a for a in all_items if a not in children]
+            all_items = [a for a in all_items if a['id'] not in children]
             page_token = response.get('nextPageToken',None)
 
             if page_token == None:
@@ -139,21 +139,23 @@ class Google_Drive():
         return all_items
 
 
-    def download_recursively(self, list_id):
+    def download_recursively(self, list_id, google_types):
 
         p = Pool(12)
-        target = partial(download_file_or_folder, drive_service=self.service, path="drive")
+        target = partial(download_file_or_folder,google_types=google_types, drive_service=self.service, path="drive")
         p.map(target, list_id)
                 
     
 
 if __name__ == "__main__":
 
+    google_types = open("google_types.data").read().split("\n")
+
     g = Google_Drive()
 
     first_level = g.retrieve_drive_first_level()
     
-    g.download_recursively(first_level)
+    g.download_recursively(first_level, google_types)
     
 
 
