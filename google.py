@@ -9,9 +9,9 @@ from functools import partial
 
 import matplotlib.pyplot as plt
 
-from utils import convert_bytes, download_file_or_folder
+from utils import *
 
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SCOPES = ['https://www.googleapis.com/auth/drive']
 
 from multiprocessing import Pool
 
@@ -20,7 +20,7 @@ class Google_Drive():
 
     def __init__(self):
 
-        
+        self.creds = None
         if os.path.exists("token.pickle"):
             with open('token.pickle', 'rb') as token:
                 self.creds = pickle.load(token)
@@ -36,6 +36,9 @@ class Google_Drive():
                 pickle.dump(self.creds,token)
 
         self.service = build('drive', 'v3', credentials=self.creds)
+        self.g_types = open("google_types.data").read().split("\n")
+
+        print("Init made!")
 
     def get_files(self, page_size):
         
@@ -135,27 +138,29 @@ class Google_Drive():
             if page_token == None:
                 break
 
-        #first-level only files, including directors
+        #first-level only files, including directors, without google types
+        all_items = [a for a in all_items if a['mimeType'] not in self.g_types]
+
+        print("Got first level!")
         return all_items
 
 
-    def download_recursively(self, list_id, google_types):
+    def download_recursively(self, list_id, path):
 
+        print("Started downloading!")
         p = Pool(12)
-        target = partial(download_file_or_folder,google_types=google_types, drive_service=self.service, path="drive")
+        target = partial(download_file_or_folder,google_types=self.g_types, drive_service=self.service, path=path)
         p.map(target, list_id)
                 
     
 
 if __name__ == "__main__":
 
-    google_types = open("google_types.data").read().split("\n")
-
     g = Google_Drive()
 
     first_level = g.retrieve_drive_first_level()
-    
-    g.download_recursively(first_level, google_types)
+    path = "/media/mihai/Mass Storage"
+    g.download_recursively(first_level, path)
     
 
 
