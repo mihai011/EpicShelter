@@ -1,7 +1,7 @@
 from __future__ import print_function
 import pickle
 import os.path
-from googleapiclient.discovery import build
+import googleapiclient.discovery 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
@@ -31,7 +31,7 @@ def main():
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
 
-    service = build('drive', 'v3', credentials=creds)
+    service = googleapiclient.discovery.build('drive', 'v3', credentials=creds)
 
     # Call the Drive v3 API
     results = service.files().list(

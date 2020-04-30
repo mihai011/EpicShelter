@@ -6,19 +6,22 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 from functools import partial
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
 from utils import *
+from processing_class import MyPool
 
-SCOPES = ['https://www.googleapis.com/auth/drive']
-
-from multiprocessing import Pool
+SCOPES = ['https://www.googleapis.com/auth/drive',\
+    'https://www.googleapis.com/auth/drive.install',\
+    'https://www.googleapis.com/auth/drive.appdata']
 
 
 class Google_Drive():
 
     def __init__(self):
+        """Verifiy credentials and construct and create credentials if necessary"""
 
         self.creds = None
         if os.path.exists("token.pickle"):
@@ -29,7 +32,7 @@ class Google_Drive():
             if self.creds and self.creds.expired and self.creds.refresh_token:
                 self.creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file('test.json', SCOPES)
                 self.creds = flow.run_local_server(port=0)
             
             with open('token.pickle', 'wb') as token:
@@ -69,6 +72,7 @@ class Google_Drive():
 
 
     def show_full_stats(self):
+        """ getting some stats about the current state of the drive """
 
         stats = {}
         total = 0
@@ -95,20 +99,23 @@ class Google_Drive():
 
         for s in stats.keys():
             stats[s] = (stats[s]/total) * 100
+
         
         plt.xticks(rotation='vertical')
         plt.bar(stats.keys(), stats.values(), 1.0, color='g')
         plt.show()
 
     def retrieve_drive_first_level(self):
+        """getting the first level of the drive file structure"""
 
+        print("Getting Drive first level!")
         all_items = []
-
         page_token = None
 
         while True:
             
-            response = self.service.files().list(fields='nextPageToken, files(id, name, mimeType)',
+            response = self.service.files().list(q="'me' in owners and trashed=false",
+                fields='nextPageToken, files(id, name, mimeType)',
                 pageToken=page_token).execute()
 
             all_items += response.get('files', [])
@@ -145,22 +152,32 @@ class Google_Drive():
         return all_items
 
 
-    def download_recursively(self, list_id, path):
-
+    def full_download(self, list_id, path):
+        """Download a list of files with id's at a designated path"""
         print("Started downloading!")
-        p = Pool(12)
+        p = MyPool(12)
         target = partial(download_file_or_folder,google_types=self.g_types, drive_service=self.service, path=path)
-        p.map(target, list_id)
-                
-    
+        data = p.map(target, list_id)
+        data = list(filter(lambda x: x!=None), data)
+        while len(data) !=  0:
+            data = p.map(target, data)
+            data = list(filter(lambda x: x!=None), data)
+        #p.join()
+        p.close()
+        print("Download finished!")
+        """
+        for item in tqdm(list_id):
+            download_file_or_folder(item, self.service, path, self.g_types)
+        """
+
 
 if __name__ == "__main__":
 
     g = Google_Drive()
-
+    #g.show_full_stats()
     first_level = g.retrieve_drive_first_level()
-    path = "/media/mihai/Mass Storage"
-    g.download_recursively(first_level, path)
+    path = "/media/mih01/Mass Storage"
+    g.full_download(first_level, path)
     
 
 
