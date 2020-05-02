@@ -32,7 +32,7 @@ def download_file_or_folder(item, drive_service,path, google_types):
                         fields='files(id, name, mimeType)').execute()
         except HttpError as e:
             cprint('{}'.format(e), 'red', 'on_white')
-            if json.loads(e._get_reason())["code"] == 416:
+            if e.resp.status == 416:
                 return None
             return item
         children =  children_response.get('files',[])
@@ -67,7 +67,7 @@ def download_file_or_folder(item, drive_service,path, google_types):
             fh.close()
         except HttpError as e:
             cprint('{}'.format(e), 'green', 'on_white')
-            if json.loads(e._get_reason())["code"] == 416:
+            if e.resp.status == 416:
                 return None
             return item
         except IsADirectoryError as e:
