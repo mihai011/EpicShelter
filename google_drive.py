@@ -158,10 +158,10 @@ class Google_Drive():
         p = MyPool(12)
         target = partial(download_file_or_folder,google_types=self.g_types, drive_service=self.service, path=path)
         data = p.map(target, list_id)
-        data = list(filter(lambda x: x!=None), data)
+        data = list(filter(lambda x: x!=None, data))
         while len(data) !=  0:
             data = p.map(target, data)
-            data = list(filter(lambda x: x!=None), data)
+            data = list(filter(lambda x: x!=None, data))
         #p.join()
         p.close()
         print("Download finished!")

@@ -24,14 +24,12 @@ def download_file_or_folder(item, drive_service,path, google_types):
 
         if not os.path.exists(item_path):
             os.makedirs(item_path)
-            #cprint('Directory {} made!!!'.format(item_path), 'green', 'on_white')
 
         query = "'"+file_id+"' in parents and 'me' in owners and trashed=false"
         try:
             children_response = drive_service.files().list(q=query,
                         fields='files(id, name, mimeType)').execute()
         except HttpError as e:
-            cprint('{}'.format(e), 'red', 'on_white')
             if e.resp.status == 416:
                 return None
             return item
@@ -65,10 +63,10 @@ def download_file_or_folder(item, drive_service,path, google_types):
                     status, done = downloader.next_chunk()
                     f.write(fh.getvalue())
             fh.close()
+            print(item_path)
         except HttpError as e:
-            cprint('{}'.format(e), 'green', 'on_white')
             if e.resp.status == 416:
                 return None
             return item
         except IsADirectoryError as e:
-            cprint('{}|{}'.format(item['mimeType'],e), 'red', 'on_grey')
+            return item
