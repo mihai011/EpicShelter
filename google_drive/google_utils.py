@@ -14,7 +14,7 @@ def convert_bytes(b, scales):
 def get_google_types():
     return open("google_types.data").read().split("\n")
 
-def download_file_or_folder(item, drive_service,path, google_types):
+def download_file_or_folder(item, drive_service, path, google_types):
     
 
     file_id = item['id'] 
