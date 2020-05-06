@@ -2,11 +2,14 @@ import sys
 import os
 
 import boto3
+
 from processing_class import MyPool
 from functools import partial
+import threading
 
-from amazon_utils import upload_to_s3, download_to_s3
-
+from amazon_utils import *
+from tqdm import tqdm
+from time import sleep
 
 class AmazonS3():
     
@@ -21,27 +24,22 @@ class AmazonS3():
 
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
         target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path)
-        p = MyPool(12)
-        p.map(target, files)
-        p.close()
+        download_to_s3
 
         print("Upload done!")
 
     def download_local(self, local_path):
 
-        print("Started download!")
         files = self.client.list_objects(Bucket=self.bucket)
-        # geting all the files in the first level
         paths = [f["Key"] for f in files["Contents"]]
         target = partial(download_to_s3, bucket=self.bucket, local_path=local_path)
-        p = MyPool(12)
-        p.map(target, paths)
-        p.close()
-
+        
+        download_thread = threading.Thread(target=download_keys,args=[target,paths,12, self.bucket])
+        download_thread.start()
 
 
 if __name__ == "__main__":
 
     s3 = AmazonS3("epic-shelter")
-    s3.download_local("/media/mih01/Mass Storage")
+    s3.download_local("/media/mih01/Mass Storage/Transfer")
 

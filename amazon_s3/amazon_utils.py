@@ -6,6 +6,18 @@ import os
 import boto3
 
 client = boto3.client("s3")
+s3 = boto3.resource('s3')
+
+def get_size_folder(start_path = '.'):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            # skip if it is symbolic link
+            if not os.path.islink(fp):
+                total_size += os.path.getsize(fp)
+
+    return total_size
 
 def upload_to_s3(item,bucket,local_path):
 
@@ -31,9 +43,25 @@ def download_to_s3(item, bucket, local_path):
             os.makedirs(os.path.dirname(filename))
         except OSError as exc: # Guard against race condition
             pass
-    
-    print(filename)
-    with open(filename, 'wb+') as data:
-        client.download_fileobj(bucket, item, data)
-        
 
+    s3.meta.client.download_file(bucket, item, filename)
+
+
+def get_bucket_size(bucket_name):
+
+    total_size = 0
+    bucket = boto3.resource('s3').Bucket(bucket_name)
+    for object in bucket.objects.all():
+        total_size += object.size
+    return total_size
+
+
+
+def download_keys(target, paths, cores, bucket):
+
+    size = get_bucket_size(bucket)
+    print("Started downloading: "+ str(size/1024/1024/1024) + " GB")
+    p = MyPool(cores)
+    p.map(target, paths)
+    p.close()
+    print("Download ended!")
