@@ -24,7 +24,9 @@ class AmazonS3():
 
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
         target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path)
-        download_to_s3
+        p = MyPool(12)
+        p.map(target, files)
+        p.close()
 
         print("Upload done!")
 
@@ -41,5 +43,5 @@ class AmazonS3():
 if __name__ == "__main__":
 
     s3 = AmazonS3("epic-shelter")
-    s3.download_local("/media/mih01/Mass Storage/Transfer")
+    s3.upload_local("/media/mih01/Mass Storage/Transfer")
 
