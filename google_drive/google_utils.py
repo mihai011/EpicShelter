@@ -5,7 +5,7 @@ from termcolor import cprint
 from googleapiclient.errors import HttpError
 
 from functools import partial
-from processing_class import MyPool
+from .processing_class import MyPool
 import json
 
 def convert_bytes(b, scales):

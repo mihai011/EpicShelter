@@ -10,8 +10,8 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-from google_utils import *
-from processing_class import MyPool
+from .google_utils import *
+from .processing_class import MyPool
 
 SCOPES = ['https://www.googleapis.com/auth/drive',\
     'https://www.googleapis.com/auth/drive.install',\
