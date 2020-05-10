@@ -1,4 +1,4 @@
-from processing_class import MyPool
+from .processing_class import MyPool
 from functools import partial
 
 import sys

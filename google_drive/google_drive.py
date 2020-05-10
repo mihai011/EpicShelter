@@ -10,8 +10,8 @@ from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 
-from .google_utils import *
-from .processing_class import MyPool
+from utils.google_utils import *
+from utils.processing_class import MyPool
 
 SCOPES = ['https://www.googleapis.com/auth/drive',\
     'https://www.googleapis.com/auth/drive.install',\
@@ -152,8 +152,9 @@ class Google_Drive():
         return all_items
 
 
-    def full_download(self, list_id, path):
+    def download_local(self, path):
         """Download a list of files with id's at a designated path"""
+        list_id = self.retrieve_drive_first_level()
         print("Started downloading!")
         p = MyPool(12)
         target = partial(download_file_or_folder,google_types=self.g_types, drive_service=self.service, path=path)
@@ -162,22 +163,27 @@ class Google_Drive():
         while len(data) !=  0:
             data = p.map(target, data)
             data = list(filter(lambda x: x!=None, data))
-        #p.join()
         p.close()
         print("Download finished!")
-        """
-        for item in tqdm(list_id):
-            download_file_or_folder(item, self.service, path, self.g_types)
-        """
+
+
+    def upload_local(self, local_path):
+        """Upload all the contents from a local path """
+
+
+        files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
+        target = partial(upload_to_drive)
+        p = MyPool(12)
+        p.map(target, files)
+        p.close()
 
 
 if __name__ == "__main__":
 
     g = Google_Drive()
     #g.show_full_stats()
-    first_level = g.retrieve_drive_first_level()
-    path = "/media/mih01/Mass Storage"
-    g.full_download(first_level, path)
+    #path = "/media/mih01/Mass Storage/Transfer"
+    #g.download_local(path)
     
 
 

@@ -70,3 +70,8 @@ def download_file_or_folder(item, drive_service, path, google_types):
             return item
         except IsADirectoryError as e:
             return item
+
+
+def upload_to_drive(file):
+
+    pass

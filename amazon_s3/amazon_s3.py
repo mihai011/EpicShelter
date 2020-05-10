@@ -3,11 +3,13 @@ import os
 
 import boto3
 
-from processing_class import MyPool
+
+from utils.processing_class import MyPool
+from utils.amazon_utils import *
+
 from functools import partial
 import threading
 
-from amazon_utils import *
 from tqdm import tqdm
 from time import sleep
 
