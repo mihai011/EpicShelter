@@ -12,6 +12,6 @@ from google_drive.google_drive import Google_Drive
 # gd.download_local("/home/mih011/Desktop/Transfer_test")
 
 s3 = AmazonS3("epic-shelter",12)
-#s3.upload_local("/home/mih011/Desktop/Transfer")
-#s3.download_local("/home/mih011/Desktop/Transfer_test")
+# s3.upload_local("/home/mih011/Desktop/Transfer")
+# s3.download_local("/home/mih011/Desktop/Transfer_test")
 s3.delete_all_files()
