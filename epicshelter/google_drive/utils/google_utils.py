@@ -1,5 +1,5 @@
 import io
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 import os
 from termcolor import cprint
 from googleapiclient.errors import HttpError
@@ -7,12 +7,13 @@ from googleapiclient.errors import HttpError
 from functools import partial
 from .processing_class import MyPool
 import json
+import ntpath
+import magic
+import socket
 
 def convert_bytes(b, scales):
     return b/(1024**scales)
 
-def get_google_types():
-    return open("google_types.data").read().split("\n")
 
 def download_file_or_folder(item, drive_service, path, google_types):
     
@@ -42,13 +43,10 @@ def download_file_or_folder(item, drive_service, path, google_types):
         while len(remaining) != 0:
             remaining = p.map(target, remaining)
             remaining = list(filter(lambda x: x!=None, remaining))
-        #p.join()
+
         p.close()
+        p.join()
         
-        """
-        for c in children:
-            download_file_or_folder(c, drive_service, item_path, google_types)
-        """
     else:
 
         try:
@@ -72,6 +70,90 @@ def download_file_or_folder(item, drive_service, path, google_types):
             return item
 
 
-def upload_to_drive(file):
+def upload_file_or_folder(path, drive_service, parent_id):
 
-    pass
+
+    if os.path.isdir(path):
+        folder_name = ntpath.basename(path)
+
+        if parent_id == None:
+
+            file_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+        else:
+            file_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents' :[parent_id]
+            }
+        try:
+            file = drive_service.files().create(body=file_metadata,
+                                        fields='id').execute()
+        except HttpError as e:
+            if e.resp.status == 416:
+                return None
+            return path
+
+        folder_id = file.get("id")
+        children = [os.path.join(path,p) for p in os.listdir(path)]
+        p = MyPool(12)
+        target = partial(upload_file_or_folder, drive_service=drive_service, parent_id=folder_id)
+        remaining = p.map(target, children)
+        remaining = list(filter(lambda x: x!=None, remaining))
+        while len(remaining) != 0:
+            remaining = p.map(target, remaining)
+            remaining = list(filter(lambda x: x!=None, remaining))
+            if len(remaining) == 1:
+                print(remaining[0])
+        p.close()
+        p.join()
+        print(path) 
+
+    elif os.path.isfile(path):
+
+        try:
+            mt = magic.Magic(mime=True)
+            mt = mt.from_file(path)
+            file_name = ntpath.basename(path)
+            if parent_id == None:
+                file_metadata = {'name': file_name,
+                    'mimeType': mt
+                    }
+            else:
+                file_metadata = {'name': file_name,
+                    'parents' :[parent_id],
+                    'mimeType': mt
+                    }
+            
+            fh = open(path,"rb+")
+            media = MediaIoBaseUpload(fh,mimetype=mt,
+                chunksize=6024*1024, resumable=True)
+
+            request = drive_service.files().create(body=file_metadata,
+                                                media_body=media,
+                                                fields='id').execute()
+
+            fh.close()
+            print(path)
+        except HttpError as e:
+            if e.resp.status == 416:
+                return None
+            if e.resp.status in [403, 404, 500, 512]:
+                print("error:"+str(e)+":"+path)
+            return path
+        except IsADirectoryError as e:
+            return path
+        except socket.timeout as e:
+            return path
+
+def delete_file(file,drive_service):
+
+    try:
+        drive_service.files().delete(fileId=file['id']).execute()
+        print(file['name'])
+    except HttpError as e:
+        if e.resp.status == 404:
+            return None
+        return file

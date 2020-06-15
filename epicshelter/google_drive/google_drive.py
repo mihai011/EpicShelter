@@ -20,7 +20,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive',\
 
 class Google_Drive():
 
-    def __init__(self):
+    def __init__(self, credentials_file, google_types_file):
         """Verifiy credentials and construct and create credentials if necessary"""
 
         self.creds = None
@@ -32,14 +32,14 @@ class Google_Drive():
             if self.creds and self.creds.expired and self.creds.refresh_token:
                 self.creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file('test.json', SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
                 self.creds = flow.run_local_server(port=0)
             
             with open('token.pickle', 'wb') as token:
                 pickle.dump(self.creds,token)
 
         self.service = build('drive', 'v3', credentials=self.creds)
-        self.g_types = open("google_types.data").read().split("\n")
+        self.g_types = open(google_types_file).read().split("\n")
 
         print("Init made!")
 
@@ -100,7 +100,7 @@ class Google_Drive():
         for s in stats.keys():
             stats[s] = (stats[s]/total) * 100
 
-        
+        print(stats)
         plt.xticks(rotation='vertical')
         plt.bar(stats.keys(), stats.values(), 1.0, color='g')
         plt.show()
@@ -164,6 +164,7 @@ class Google_Drive():
             data = p.map(target, data)
             data = list(filter(lambda x: x!=None, data))
         p.close()
+        p.join()
         print("Download finished!")
 
 
@@ -172,16 +173,57 @@ class Google_Drive():
 
 
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
-        target = partial(upload_to_drive)
+        target = partial(upload_file_or_folder,drive_service = self.service,parent_id=None)
         p = MyPool(12)
-        p.map(target, files)
+        data = p.map(target, files)
+        data = list(filter(lambda x: x!=None, data))
+        while len(data) !=  0:
+            data = p.map(target, data)
+            data = list(filter(lambda x: x!=None, data))
+            if len(data) == 1:
+                print(data[0])
         p.close()
+        p.join()
+        print("Upload finished!")
+
+        
+    def delete_all_files(self):
+
+        page_token = None
+        files = []
+
+        while True:
+
+            response = self.service.files().list(fields='nextPageToken, files(id,name)',
+                    pageToken=page_token).execute()
+
+            page_token = response.get('nextPageToken', None)
+            files += response.get('files',[])
+            print("%d files found" % len(files))
+
+            if page_token is None:
+                break
+            
+            
+        target = partial(delete_file,drive_service = self.service)
+        p = MyPool(12)
+        data = p.map(target, files)
+        data = list(filter(lambda x: x!=None, data))
+        while len(data) !=  0:
+            data = p.map(target, data)
+            data = list(filter(lambda x: x!=None, data))
+            print(len(data))
+        p.close()
+        p.join()
+
+        print("Delete all finished!")
+
 
 
 if __name__ == "__main__":
 
     g = Google_Drive()
-    #g.show_full_stats()
+    g.show_full_stats()
     #path = "/media/mih01/Mass Storage/Transfer"
     #g.download_local(path)
     

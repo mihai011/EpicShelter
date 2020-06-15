@@ -28,6 +28,9 @@ def upload_to_s3(item,bucket,local_path):
         p = MyPool(12)
         p.map(target, files)
         p.close()
+        p.join()
+        
+
 
     else:
         key = os.path.relpath(item, local_path)

@@ -15,10 +15,11 @@ from time import sleep
 
 class AmazonS3():
     
-    def __init__(self, bucket):
+    def __init__(self, bucket, cores):
         
         self.bucket = bucket
         self.client = boto3.client("s3")
+        self.cores = cores
 
     def upload_local(self, local_path):
 
@@ -26,9 +27,12 @@ class AmazonS3():
 
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
         target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path)
-        p = MyPool(12)
+        p = MyPool(self.cores)
         p.map(target, files)
         p.close()
+        p.join()
+        
+
 
         print("Upload done!")
 
@@ -38,9 +42,15 @@ class AmazonS3():
         paths = [f["Key"] for f in files["Contents"]]
         target = partial(download_to_s3, bucket=self.bucket, local_path=local_path)
         
-        download_thread = threading.Thread(target=download_keys,args=[target,paths,12, self.bucket])
+        download_thread = threading.Thread(target=download_keys,args=[target,paths,self.cores, self.bucket])
         download_thread.start()
 
+    def delete_all_files(self):
+
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(self.bucket)
+        bucket.objects.all().delete()
+        print("Delete all done!")
 
 if __name__ == "__main__":
 
