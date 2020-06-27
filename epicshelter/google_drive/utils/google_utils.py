@@ -14,6 +14,12 @@ import socket
 def convert_bytes(b, scales):
     return b/(1024**scales)
 
+def read_in_chunks(file_object, chunk_size=1024):
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
 
 def download_file_or_folder(item, drive_service, path, google_types):
     
@@ -59,7 +65,10 @@ def download_file_or_folder(item, drive_service, path, google_types):
             with open(item_path, "wb+") as f:
                 while done is False:
                     status, done = downloader.next_chunk()
-                    f.write(fh.getvalue())
+                    data = fh.getvalue()
+                    fh.truncate(0)
+                    fh.seek(0)
+                    f.write(data)
             fh.close()
             print(item_path)
         except HttpError as e:
@@ -157,3 +166,34 @@ def delete_file(file,drive_service):
         if e.resp.status == 404:
             return None
         return file
+
+def get_file_path(file, drive_service):
+
+        id = file['id']
+
+        tree = []  # Result
+        while True:
+            try:
+                file = drive_service.files().get(fileId=id, fields='id, name, parents').execute()
+                parent = file.get('parents')
+                if parent:
+                    while True:
+                        folder = drive_service.files().get(
+                            fileId=parent[0], fields='id, name, parents').execute()
+                        parent = folder.get('parents')
+                        if parent is None:
+                            break
+                        tree.append(folder.get('name'))
+
+                break
+            except HttpError as e:
+                if e.resp.status == 416:
+                    return None
+                
+
+
+        tree.reverse()
+        tree.append(file["name"])
+        path = os.path.join(*tree)
+        
+        return [path,file['id']]
