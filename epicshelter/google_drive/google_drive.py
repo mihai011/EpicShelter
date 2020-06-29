@@ -28,6 +28,8 @@ class Google_Drive():
 
     g_types = open( "google_types.data").read().split("\n")
 
+    lookup_table = {}
+
     def __init__(self, credentials_file):
         """Verifiy credentials and construct and create credentials if necessary"""
 
@@ -48,9 +50,22 @@ class Google_Drive():
 
         self.service = build('drive', 'v3', credentials=self.creds)
 
-        self.first_level = Google_Drive.retrieve_drive_first_level(self.service)
+        #self.first_level = Google_Drive.retrieve_drive_first_level(self.service)
 
         print("Init made!")
+
+    @staticmethod
+    def add_path(path,id):
+
+        Google_Drive.lookup_table[path] = id
+    
+    @staticmethod
+    def get_id(path):
+
+        if path in Google_Drive.lookup_table:
+            return Google_Drive.lookup_table[path]
+        
+        return None 
 
     def get_files(self, page_size):
         
@@ -198,6 +213,8 @@ class Google_Drive():
         
     def delete_all_files(self):
 
+        Google_Drive.lookup_table = {}
+
         page_token = None
         files = []
 
@@ -297,56 +314,63 @@ class Google_Drive():
 
             def __init__(self, creds, packet, service):
 
-                first_level = Google_Drive.retrieve_drive_first_level(service)
+                
 
                 while True:
 
                     try:
+                        
                         path = packet["path"]
                         print(path)
-
+                        table_path = os.path.dirname(path)
+                        last_id = Google_Drive.get_id(table_path)
                         self.filesize = packet['filesize']
                         self.path = path.split("/")
-
-                        last_id = None
                         access_token = creds.token
+                        
+                        if last_id == None:
 
-                        level = first_level
-                        
-                        
-                        for i in range(len(self.path)-1):
-                            found = False
-                            for l in level:
+                            first_level = Google_Drive.retrieve_drive_first_level(service)
+
                             
-                                if self.path[i] == l['name'] and l['mimeType'] == 'application/vnd.google-apps.folder':
-                                    found=True
-                                    children_response = service.files().list(q="'"+l['id']+"' in parents",
-                                        fields='files(id, name, mimeType)').execute()
-                                    children = children_response.get('files',[])
-                                    last_id = l['id']
-                                    break
 
-                            if found:
-                                level = children
-                            else:
-                                if last_id == None:
-
-                                    file_metadata = {
-                                        'name': self.path[i],
-                                        'mimeType': 'application/vnd.google-apps.folder'
-                                    }
-                                else:
-                                     file_metadata = {
-                                        'name': self.path[i],
-                                        'mimeType': 'application/vnd.google-apps.folder',
-                                        'parents':[last_id]
-                                    }
-                                file = service.files().create(body=file_metadata,
-                                                                    fields='id').execute()
-
-                                last_id = file.get('id')
-
+                            level = first_level
+                            
+                            for i in range(len(self.path)-1):
                                 
+                                found = False
+                                for l in level:
+                                
+                                    if self.path[i] == l['name'] and l['mimeType'] == 'application/vnd.google-apps.folder':
+                                        found=True
+                                        children_response = service.files().list(q="'"+l['id']+"' in parents",
+                                            fields='files(id, name, mimeType)').execute()
+                                        children = children_response.get('files',[])
+                                        last_id = l['id']
+                                        break
+
+                                if found:
+                                    level = children
+                                else:
+                                    if last_id == None:
+
+                                        file_metadata = {
+                                            'name': self.path[i],
+                                            'mimeType': 'application/vnd.google-apps.folder'
+                                        }
+                                        
+                                    else:
+                                        file_metadata = {
+                                            'name': self.path[i],
+                                            'mimeType': 'application/vnd.google-apps.folder',
+                                            'parents':[last_id]
+                                        }
+                                    file = service.files().create(body=file_metadata,
+                                                                        fields='id').execute()
+                                    last_id = file.get('id')
+                                    new_path = "/".join(self.path[:i+1])
+                                    Google_Drive.add_path(new_path ,last_id)
+
 
                         if last_id == None:
                             params = {
@@ -374,6 +398,7 @@ class Google_Drive():
                         break
                     except Exception as e:
                         print(e)
+                        
 
                     
 
@@ -450,7 +475,6 @@ class Google_Drive():
                 return Uploader(self.creds, packet, self.service)
 
         self.get_all_file_ids_paths()
-
 
         return Member(self.current_data, self.service, self.creds)
 
