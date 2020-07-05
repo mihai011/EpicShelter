@@ -125,7 +125,7 @@ class AmazonS3():
 
             def create_giver(self, index):
 
-                downloader = Downloader(self.bucket, self.data[index], 262144*128)
+                downloader = Downloader(self.bucket, self.data[index], 262144*256)
 
                 s3 = boto3.resource('s3')
                 s3_object = s3.Object(self.bucket, self.data[index])

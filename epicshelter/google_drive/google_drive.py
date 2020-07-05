@@ -60,12 +60,33 @@ class Google_Drive():
         Google_Drive.lookup_table[path] = id
     
     @staticmethod
-    def get_id(path):
+    def get_id(full_path):
 
-        if path in Google_Drive.lookup_table:
-            return Google_Drive.lookup_table[path]
+        len_path = len(full_path.split("/"))
+        full_path = full_path.split("/")
         
-        return None 
+        for i in range(len_path,0,-1):
+            path = "/".join(full_path[:i])
+            if path in Google_Drive.lookup_table:
+                if len(full_path[i:]) >= 1: 
+                    return Google_Drive.lookup_table[path],i, False
+                else:
+                    return Google_Drive.lookup_table[path],i, True
+        
+        return None,0,False
+
+    @staticmethod
+    def get_children(service,id):
+        
+        if id == None:
+            return []
+
+        children_response = service.files().list(q="'"+id+"' in parents",
+                                            fields='files(id, name, mimeType)').execute()
+        children = children_response.get('files',[])
+
+        return children
+
 
     def get_files(self, page_size):
         
@@ -323,20 +344,16 @@ class Google_Drive():
                         path = packet["path"]
                         print(path)
                         table_path = os.path.dirname(path)
-                        last_id = Google_Drive.get_id(table_path)
+                        last_id, index, final = Google_Drive.get_id(table_path)
                         self.filesize = packet['filesize']
                         self.path = path.split("/")
                         access_token = creds.token
-                        
-                        if last_id == None:
 
-                            first_level = Google_Drive.retrieve_drive_first_level(service)
+                        if not final:
 
+                            level = Google_Drive.get_children(service, last_id)
                             
-
-                            level = first_level
-                            
-                            for i in range(len(self.path)-1):
+                            for i in range(index,len(self.path)-1):
                                 
                                 found = False
                                 for l in level:
@@ -347,6 +364,8 @@ class Google_Drive():
                                             fields='files(id, name, mimeType)').execute()
                                         children = children_response.get('files',[])
                                         last_id = l['id']
+                                        new_path = "/".join(self.path[:i+1])
+                                        Google_Drive.add_path(new_path ,last_id)
                                         break
 
                                 if found:
@@ -400,9 +419,6 @@ class Google_Drive():
                         print(e)
                         
 
-                    
-
-                
             def write(self,piece):
                 
                 offset = self.prev+len(piece)-1

@@ -14,9 +14,9 @@ gd.delete_all_files()
 #gd.download_local("/home/mih011/Desktop/Transfer_test")
 
 s3 = AmazonS3("epic-shelter",12)
-#s3.delete_all_files()
+# #3.delete_all_files()
 # s3.upload_local("/home/mih011/Desktop/Transfer")
-#s3.upload_local("/home/mih011/Desktop/Transfer_test")
+# s3.upload_local("/home/mih011/Desktop/Transfer_test")
 # s3.delete_all_files()
 
 # # #gd = Google_Drive("credentials.json", "google_types.data")
