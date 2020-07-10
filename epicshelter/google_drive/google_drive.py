@@ -23,6 +23,166 @@ SCOPES = ['https://www.googleapis.com/auth/drive',\
     'https://www.googleapis.com/auth/drive.install',\
     'https://www.googleapis.com/auth/drive.appdata']
 
+class Uploader():
+
+    def __init__(self, creds, packet, service):
+
+
+        while True:
+
+            try:
+                
+                path = packet["path"]
+                print(path)
+                table_path = os.path.dirname(path)
+                last_id, index, final = Google_Drive.get_id(table_path)
+                self.filesize = packet['filesize']
+                self.path = path.split("/")
+                access_token = creds.token
+
+                if not final:
+
+                    level = Google_Drive.get_children(service, last_id)
+                    
+                    for i in range(index,len(self.path)-1):
+                        
+                        found = False
+                        for l in level:
+                        
+                            if self.path[i] == l['name'] and l['mimeType'] == 'application/vnd.google-apps.folder':
+                                found=True
+                                children_response = service.files().list(q="'"+l['id']+"' in parents",
+                                    fields='files(id, name, mimeType)').execute()
+                                children = children_response.get('files',[])
+                                last_id = l['id']
+                                new_path = "/".join(self.path[:i+1])
+                                Google_Drive.add_path(new_path ,last_id)
+                                break
+
+                        if found:
+                            level = children
+                        else:
+                            if last_id == None:
+
+                                file_metadata = {
+                                    'name': self.path[i],
+                                    'mimeType': 'application/vnd.google-apps.folder'
+                                }
+                                
+                            else:
+                                file_metadata = {
+                                    'name': self.path[i],
+                                    'mimeType': 'application/vnd.google-apps.folder',
+                                    'parents':[last_id]
+                                }
+                            file = service.files().create(body=file_metadata,
+                                                                fields='id').execute()
+                            last_id = file.get('id')
+                            new_path = "/".join(self.path[:i+1])
+                            Google_Drive.add_path(new_path ,last_id)
+
+
+                if last_id == None:
+                    params = {
+                    "name": self.path[-1],
+                    "mimeType": 'application/octet-stream',
+                    }
+                else:
+                    params = {
+                    "name": self.path[-1],
+                    "mimeType": 'application/octet-stream',
+                    "parents":[last_id]
+                }
+
+                headers = {"Authorization": "Bearer "+access_token, "Content-Type": "application/json"}
+                
+                r = requests.post(
+                    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+                    headers=headers,
+                    data=json.dumps(params)
+                )
+
+                self.location = r.headers['Location']
+                self.prev = 0
+
+                break
+            except Exception as e:
+                print(e)
+                
+
+    def write(self,piece):
+        
+        offset = self.prev+len(piece)-1
+        headers = {"Content-Range": "bytes "+str(self.prev)+"-" + str(offset) + "/" + str(self.filesize)}
+        self.prev = offset+1
+
+        r = requests.put(
+            self.location,
+            headers=headers,
+            data=piece
+        )
+        
+
+    def close(self):
+        pass
+
+
+
+class Downloader():
+
+    def __init__(self, fh, downloader):
+
+        self.fh = fh
+        self.downloader = downloader
+
+    def next_chunk(self):
+
+        return self.downloader.next_chunk()
+
+    def getvalue(self): 
+
+        data = self.fh.getvalue()
+        self.fh.truncate(0)
+        self.fh.seek(0)
+
+        return data
+
+
+    def close(self):
+
+        self.fh.close()
+        
+
+
+class Member():
+
+    def __init__(self, data, service, creds):
+        
+        self.data = data
+        self.service = service
+        self.creds = creds
+
+    def __len__(self):
+        
+        return len(self.data)
+
+    def create_giver(self,index):
+
+        request = self.service.files().get_media(fileId=self.data[index][1])
+
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+
+        package = {"path":self.data[index][0]}
+        
+        return Downloader(fh, downloader) , package
+
+    def create_receiver(self,packet):
+
+        return Uploader(self.creds, packet, self.service)
+
+
+
 
 class Google_Drive():
 
@@ -331,167 +491,8 @@ class Google_Drive():
 
     def make_member(self):
 
-        class Uploader():
-
-            def __init__(self, creds, packet, service):
-
-                
-
-                while True:
-
-                    try:
-                        
-                        path = packet["path"]
-                        print(path)
-                        table_path = os.path.dirname(path)
-                        last_id, index, final = Google_Drive.get_id(table_path)
-                        self.filesize = packet['filesize']
-                        self.path = path.split("/")
-                        access_token = creds.token
-
-                        if not final:
-
-                            level = Google_Drive.get_children(service, last_id)
-                            
-                            for i in range(index,len(self.path)-1):
-                                
-                                found = False
-                                for l in level:
-                                
-                                    if self.path[i] == l['name'] and l['mimeType'] == 'application/vnd.google-apps.folder':
-                                        found=True
-                                        children_response = service.files().list(q="'"+l['id']+"' in parents",
-                                            fields='files(id, name, mimeType)').execute()
-                                        children = children_response.get('files',[])
-                                        last_id = l['id']
-                                        new_path = "/".join(self.path[:i+1])
-                                        Google_Drive.add_path(new_path ,last_id)
-                                        break
-
-                                if found:
-                                    level = children
-                                else:
-                                    if last_id == None:
-
-                                        file_metadata = {
-                                            'name': self.path[i],
-                                            'mimeType': 'application/vnd.google-apps.folder'
-                                        }
-                                        
-                                    else:
-                                        file_metadata = {
-                                            'name': self.path[i],
-                                            'mimeType': 'application/vnd.google-apps.folder',
-                                            'parents':[last_id]
-                                        }
-                                    file = service.files().create(body=file_metadata,
-                                                                        fields='id').execute()
-                                    last_id = file.get('id')
-                                    new_path = "/".join(self.path[:i+1])
-                                    Google_Drive.add_path(new_path ,last_id)
-
-
-                        if last_id == None:
-                            params = {
-                            "name": self.path[-1],
-                            "mimeType": 'application/octet-stream',
-                            }
-                        else:
-                            params = {
-                            "name": self.path[-1],
-                            "mimeType": 'application/octet-stream',
-                            "parents":[last_id]
-                        }
-
-                        headers = {"Authorization": "Bearer "+access_token, "Content-Type": "application/json"}
-                        
-                        r = requests.post(
-                            "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
-                            headers=headers,
-                            data=json.dumps(params)
-                        )
-
-                        self.location = r.headers['Location']
-                        self.prev = 0
-
-                        break
-                    except Exception as e:
-                        print(e)
-                        
-
-            def write(self,piece):
-                
-                offset = self.prev+len(piece)-1
-                headers = {"Content-Range": "bytes "+str(self.prev)+"-" + str(offset) + "/" + str(self.filesize)}
-                self.prev = offset+1
-
-                r = requests.put(
-                    self.location,
-                    headers=headers,
-                    data=piece
-                )
-                
-
-            def close(self):
-                pass
-
-
-
-        class Downloader():
-
-            def __init__(self, fh, downloader):
-
-                self.fh = fh
-                self.downloader = downloader
-
-            def next_chunk(self):
-
-                return self.downloader.next_chunk()
-
-            def getvalue(self): 
-
-                data = self.fh.getvalue()
-                self.fh.truncate(0)
-                self.fh.seek(0)
-
-                return data
-
-
-            def close(self):
-
-                self.fh.close()
-                
-
-
-        class Member():
-
-            def __init__(self, data, service, creds):
-                
-                self.data = data
-                self.service = service
-                self.creds = creds
-
-            def __len__(self):
-                
-                return len(self.data)
-
-            def create_giver(self,index):
-
-                request = self.service.files().get_media(fileId=self.data[index][1])
-
-                fh = io.BytesIO()
-                downloader = MediaIoBaseDownload(fh, request)
-
-                package = {"path":self.data[index][0]}
-                
-                return Downloader(fh, downloader) , package
-
-            def create_receiver(self,packet):
-
-                return Uploader(self.creds, packet, self.service)
-
+        
         self.get_all_file_ids_paths()
-
         return Member(self.current_data, self.service, self.creds)
 
 if __name__ == "__main__":
