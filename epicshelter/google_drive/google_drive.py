@@ -174,6 +174,8 @@ class Member():
         downloader = MediaIoBaseDownload(fh, request)
 
         package = {"path":self.data[index][0]}
+
+        print(self.data[index][0])
         
         return Downloader(fh, downloader) , package
 

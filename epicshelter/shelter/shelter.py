@@ -33,16 +33,15 @@ def mass_transfer(index, from_member, to_member):
 
 class Shelter():
 
-    def __init__(self, workers):
+    def __init__(self):
 
         self.members = {}
-        self.workers = workers
 
     def register(self, name, object):
 
         self.members[name] = object
 
-    def transfer(self,_from,_to):
+    def transfer(self,_from,_to, workers):
 
         from_member = self.members[_from].make_member()
         to_member = self.members[_to].make_member()
@@ -50,7 +49,7 @@ class Shelter():
         print("Transfering {} items".format(len(from_member)))
         
         target = partial(mass_transfer, from_member=from_member, to_member=to_member) 
-        p = Pool(self.workers)
+        p = Pool(workers)
         p.map(target, range(len(from_member)))
         p.close()
         p.join()
