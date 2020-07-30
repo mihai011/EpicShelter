@@ -141,10 +141,8 @@ class AmazonS3():
             self.data.append(obj['Key'])
 
         
-
     def make_member(self):
 
-        
         return Member(self.bucket,self.data)
 
 if __name__ == "__main__":

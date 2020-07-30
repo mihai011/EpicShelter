@@ -122,11 +122,8 @@ class Uploader():
             data=piece
         )
         
-
     def close(self):
         pass
-
-
 
 class Downloader():
 
@@ -173,7 +170,9 @@ class Member():
         fh = io.BytesIO()
         downloader = MediaIoBaseDownload(fh, request)
 
-        package = {"path":self.data[index][0]}
+        f = self.service.files().get(fileId=self.data[index][1], fields='size').execute()
+
+        package = {"path":self.data[index][0],"filesize":f['size']}
 
         print(self.data[index][0])
         
@@ -182,8 +181,6 @@ class Member():
     def create_receiver(self,packet):
 
         return Uploader(self.creds, packet, self.service)
-
-
 
 
 class Google_Drive():
@@ -207,7 +204,7 @@ class Google_Drive():
                 flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
                 self.creds = flow.run_local_server(port=0)
             
-            with open('token.pickle', 'wb') as token:
+            with open(token_file, 'wb') as token:
                 pickle.dump(self.creds,token)
 
         self.service = build('drive', 'v3', credentials=self.creds)
@@ -378,7 +375,6 @@ class Google_Drive():
     def upload_local(self, local_path):
         """Upload all the contents from a local path """
 
-
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
         target = partial(upload_file_or_folder,drive_service = self.service,parent_id=None)
         p = MyPool(12)
@@ -493,7 +489,6 @@ class Google_Drive():
 
     def make_member(self):
 
-        
         self.get_all_file_ids_paths()
         return Member(self.current_data, self.service, self.creds)
 
