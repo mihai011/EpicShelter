@@ -192,11 +192,11 @@ class Google_Drive():
 
     lookup_table = {}
 
-    def __init__(self, credentials_file):
+    def __init__(self, credentials_file, token_file):
         """Verifiy credentials and construct and create credentials if necessary"""
 
         self.creds = None
-        if os.path.exists("token.pickle"):
+        if os.path.exists(token_file):
             with open('token.pickle', 'rb') as token:
                 self.creds = pickle.load(token)
 
