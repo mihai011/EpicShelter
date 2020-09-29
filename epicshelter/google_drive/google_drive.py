@@ -189,12 +189,12 @@ class Google_Drive():
 
     lookup_table = {}
 
-    def __init__(self, credentials_file, token_file):
+    def __init__(self, credentials_file, token_file, get_first_level):
         """Verifiy credentials and construct and create credentials if necessary"""
 
         self.creds = None
         if os.path.exists(token_file):
-            with open('token.pickle', 'rb') as token:
+            with open(token_file, 'rb') as token:
                 self.creds = pickle.load(token)
 
         if not self.creds or not self.creds.valid:
@@ -208,8 +208,11 @@ class Google_Drive():
                 pickle.dump(self.creds,token)
 
         self.service = build('drive', 'v3', credentials=self.creds)
-
-        #self.first_level = Google_Drive.retrieve_drive_first_level(self.service)
+        
+        if get_first_level:
+            self.first_level = Google_Drive.retrieve_drive_first_level(self.service)
+        else:
+            self.first_level = None
 
         print("Init made!")
 
@@ -360,7 +363,7 @@ class Google_Drive():
         """Download a list of files with id's at a designated path"""
         list_id = self.first_level
         print("Started downloading!")
-        p = MyPool(12)
+        p = MyPool(6)
         target = partial(download_file_or_folder,google_types=Google_Drive.g_types, drive_service=self.service, path=path)
         data = p.map(target, list_id)
         data = list(filter(lambda x: x!=None, data))
@@ -442,7 +445,7 @@ class Google_Drive():
         all_items = list(filter(lambda item: item["mimeType"] != "application/vnd.google-apps.folder", all_items))
 
         target = partial(get_file_path,drive_service = self.service)
-        p = MyPool(3)
+        p = MyPool(12)
         data = p.map(target, all_items)
         data = list(filter(lambda x: x!=None, data))
         p.close()
