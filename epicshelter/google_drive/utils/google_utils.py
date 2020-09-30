@@ -1,7 +1,7 @@
 import io
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 import os
-from termcolor import cprint
+from termcolor import colored
 from googleapiclient.errors import HttpError
 
 from functools import partial
@@ -70,11 +70,19 @@ def download_file_or_folder(item, drive_service, path, google_types):
                     fh.seek(0)
                     f.write(data)
             fh.close()
-            print(item_path)
+            print(colored(item_path, 'green'))
         except HttpError as e:
-            if e.resp.status == 416:
+            reason = e._get_reason()
+            print(reason)
+            if reason == "":
                 return None
-            return item
+            if reason.startswith("User Rate Limit Exceeded"):
+                print(colored(str(item['name']) + " User Rate Limit Exceeded","red"))
+                return item
+            if reason.startswith("Request range not satisfiable"):
+                print(colored(str(item['name']) +" Request range not satisfiable","red"))
+                return None
+            return None
         except IsADirectoryError as e:
             return item
 
@@ -163,7 +171,10 @@ def delete_file(file,drive_service):
         drive_service.files().delete(fileId=file['id']).execute()
         print(file['name'])
     except HttpError as e:
+        print(e)
         if e.resp.status == 404:
+            return None
+        if e.resp.status == 403:
             return None
         return file
 

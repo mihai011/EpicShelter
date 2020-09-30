@@ -335,22 +335,27 @@ class Google_Drive():
 
         while True:
 
-            response = service.files().list(q="mimeType='application/vnd.google-apps.folder'",
-                pageToken=page_token).execute()
+            try:
 
-            children = []
-            for directory in response.get('files',[]):
+                response = service.files().list(q="mimeType='application/vnd.google-apps.folder'",
+                    pageToken=page_token).execute()
 
-                children_response = service.files().list(q="'"+directory['id']+"' in parents",
-                    fields='files(id, name)').execute()
-                children += [r['id'] for r in children_response.get('files',[])]
-                
+                children = []
+                for directory in response.get('files',[]):
 
-            all_items = [a for a in all_items if a['id'] not in children]
-            page_token = response.get('nextPageToken',None)
+                    children_response = service.files().list(q="'"+directory['id']+"' in parents",
+                        fields='files(id, name)').execute()
+                    children += [r['id'] for r in children_response.get('files',[])]
+                    
 
-            if page_token == None:
-                break
+                all_items = [a for a in all_items if a['id'] not in children]
+                page_token = response.get('nextPageToken',None)
+
+                if page_token == None:
+                    break
+
+            except Exception as e:
+                pass
 
         #first-level only files, including directors, without google types
         all_items = [a for a in all_items if a['mimeType'] not in Google_Drive.g_types]
@@ -363,7 +368,7 @@ class Google_Drive():
         """Download a list of files with id's at a designated path"""
         list_id = self.first_level
         print("Started downloading!")
-        p = MyPool(6)
+        p = MyPool(12)
         target = partial(download_file_or_folder,google_types=Google_Drive.g_types, drive_service=self.service, path=path)
         data = p.map(target, list_id)
         data = list(filter(lambda x: x!=None, data))
@@ -413,7 +418,7 @@ class Google_Drive():
             
             
         target = partial(delete_file,drive_service = self.service)
-        p = MyPool(12)
+        p = MyPool(1)
         data = p.map(target, files)
         data = list(filter(lambda x: x!=None, data))
         while len(data) !=  0:
