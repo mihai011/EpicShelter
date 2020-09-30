@@ -171,7 +171,6 @@ def delete_file(file,drive_service):
         drive_service.files().delete(fileId=file['id']).execute()
         print(file['name'])
     except HttpError as e:
-        print(e)
         if e.resp.status == 404:
             return None
         if e.resp.status == 403:
