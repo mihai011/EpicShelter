@@ -200,8 +200,6 @@ def get_file_path(file, drive_service):
                 if e.resp.status == 416:
                     return None
                 
-
-
         tree.reverse()
         tree.append(file["name"])
         path = os.path.join(*tree)

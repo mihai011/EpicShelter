@@ -366,9 +366,13 @@ class Google_Drive():
 
     def download_local(self, path):
         """Download a list of files with id's at a designated path"""
+        
+        
         list_id = self.first_level
+        if list_id == None:
+            self.first_level = Google_Drive.retrieve_drive_first_level(self.service)
         print("Started downloading!")
-        p = MyPool(12)
+        p = MyPool(1)
         target = partial(download_file_or_folder,google_types=Google_Drive.g_types, drive_service=self.service, path=path)
         data = p.map(target, list_id)
         data = list(filter(lambda x: x!=None, data))
