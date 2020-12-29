@@ -107,7 +107,7 @@ class AmazonS3():
         print("Started upload")
 
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
-        target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path, client = self.client, cores=self.cores)
+        target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path,  cores=self.cores)
         p = MyPool(self.cores)
         p.map(target, files)
         p.close()
@@ -119,10 +119,14 @@ class AmazonS3():
 
         files = self.client.list_objects(Bucket=self.bucket)
         paths = [f["Key"] for f in files["Contents"]]
-        target = partial(download_to_s3, bucket=self.bucket, local_path=local_path, client = self.s3)
-        
-        download_thread = threading.Thread(target=download_keys,args=[target,paths, self.bucket, self.cores,])
-        download_thread.start()
+        target = partial(download_to_s3, bucket=self.bucket, local_path=local_path)
+
+        size = get_bucket_size(self.bucket)
+        print("Started downloading: "+ str(size/1024/1024/1024) + " GB")
+        p = MyPool(self.cores)
+        p.map(target, paths)
+        p.close()
+        print("Download done!")
 
     def delete_all_files(self):
 
@@ -148,5 +152,5 @@ class AmazonS3():
 if __name__ == "__main__":
 
     s3 = AmazonS3("epic-shelter")
-    s3.upload_local("/media/mih01/Mass Storage/Transfer")
+    s3.upload_local("/home/mihai/Desktop/Transfer_test_1")
 

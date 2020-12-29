@@ -185,7 +185,7 @@ class Member():
 
 class Google_Drive():
 
-    g_types = open( "google_types.data").read().split("\n")
+    # g_types = open( "google_types.data").read().split("\n")
 
     lookup_table = {}
 
