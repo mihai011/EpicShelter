@@ -17,13 +17,13 @@ def get_size_folder(start_path = '.'):
 
     return total_size
 
-def upload_to_s3(item,bucket,local_path, client):
+def upload_to_s3(item,bucket,local_path, client, cores):
 
     if os.path.isdir(item):
 
         files = [os.path.join(item,f) for f in os.listdir(item)]
         target = partial(upload_to_s3, bucket=bucket, local_path=local_path)
-        p = MyPool(12)
+        p = MyPool(cores)
         p.map(target, files)
         p.close()
         p.join()
@@ -54,7 +54,7 @@ def get_bucket_size(bucket_name):
     return total_size
 
 
-def download_keys(target, paths, cores, bucket):
+def download_keys(target, paths, bucket, cores):
 
     size = get_bucket_size(bucket)
     print("Started downloading: "+ str(size/1024/1024/1024) + " GB")

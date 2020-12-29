@@ -4,15 +4,15 @@ import os
 import boto3
 from smart_open import open as s3_open
 
-
 from .utils.processing_class import MyPool
 from .utils.amazon_utils import *
 
 from functools import partial
 import threading
 
-from tqdm import tqdm
 from time import sleep
+
+from multiprocessing import cpu_count
 
 class Downloader():
 
@@ -85,7 +85,6 @@ class Member():
 
         return downloader, package
 
-
     def create_receiver(self, packet):
 
         return Uploader(self.bucket, packet)
@@ -108,7 +107,7 @@ class AmazonS3():
         print("Started upload")
 
         files = [os.path.join(local_path,f) for f in os.listdir(local_path)]
-        target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path, client = self.client)
+        target = partial(upload_to_s3, bucket = self.bucket, local_path = local_path, client = self.client, cores=self.cores)
         p = MyPool(self.cores)
         p.map(target, files)
         p.close()
@@ -122,7 +121,7 @@ class AmazonS3():
         paths = [f["Key"] for f in files["Contents"]]
         target = partial(download_to_s3, bucket=self.bucket, local_path=local_path, client = self.s3)
         
-        download_thread = threading.Thread(target=download_keys,args=[target,paths,self.cores, self.bucket])
+        download_thread = threading.Thread(target=download_keys,args=[target,paths, self.bucket, self.cores,])
         download_thread.start()
 
     def delete_all_files(self):
