@@ -19,6 +19,7 @@ def mass_transfer(index, from_member, to_member):
 
     while True:
         try:
+            
             downloader, packet = from_member.create_giver(index)
             uploader = to_member.create_receiver(packet)
 
