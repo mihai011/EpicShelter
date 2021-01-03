@@ -1,8 +1,8 @@
 import os 
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, ContainerClient
 from smart_open import open
 from .processing_class import MyPool
-from .azure_utils import upload_to_azure
+from .azure_utils import upload_to_azure, download_from_azure
 from functools import partial
 
 class Downloader():
@@ -52,9 +52,9 @@ class AzureStorage:
         self.chunk_size = 1024*1024
 
         # make connection 
-        connect_str = os.environ['AZURE_STORAGE_CONNECTION_STRING']
-        self.transport_params = {'client': BlobServiceClient.from_connection_string(connect_str)}
-
+        self.connect_str = os.environ['AZURE_STORAGE_CONNECTION_STRING']
+        self.transport_params = {'client': BlobServiceClient.from_connection_string(self.connect_str)}
+        print("Azure made init!")
 
     def upload_local(self, local_path):
 
@@ -69,11 +69,33 @@ class AzureStorage:
 
         print("Upload done!")
 
-    def download_local(self):
-        pass
+    def download_local(self, local_path):
 
-    def get_all_file_ids_paths():
-        pass
+        self.get_all_file_ids_paths()
+        
+        print("Started download!")
+
+        target = partial(download_from_azure, container = self.container, local_path = local_path, transport_params=self.transport_params)
+        p = MyPool(self.cores)
+        p.map(target, self.data)
+        p.close()
+        p.join()
+
+
+        print("Finished download!")
+        
+
+    def get_all_file_ids_paths(self):
+        
+        print("Creating the list of blobs")
+
+        client = ContainerClient.from_connection_string(conn_str = self.connect_str , container_name = self.container)
+        gen = client.list_blobs()
+
+        for blob in gen:
+            self.data.append(blob["name"])
+        print("Made the list of blobs!")
+
 
     def make_member(self):
         pass

@@ -38,4 +38,6 @@ from shelter.shelter import Shelter
 
 az = AzureStorage("test", 12)
 
-az.upload_local("/home/mihai/Desktop/Repos/EpicShelter/epicshelter")
+#az.get_all_file_ids_paths()
+az.upload_local("/home/mihai/Desktop/Azure_storage")
+az.download_local("/home/mihai/Desktop/Azure_storage")
