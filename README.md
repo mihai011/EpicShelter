@@ -1,8 +1,12 @@
 # EpicShelter
 
 
-This is just a messy proof of concept that enables the transmission of data between Amazon S3 and  Google Drive.
+This is just a messy proof of concept that enables the transmission of data between different cloud storage devices.
 
-Further development on a more elaborate project will follow soon.
+Services implemented:
+  1. Amazon S3 Storage
+  2. Google Drive
+
+Further development on a more elaborate project will follow.
 
 
