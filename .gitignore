@@ -136,6 +136,6 @@ dmypy.json
 #pickle files
 *.pickle
 
-__token__
-epicshelter_tested/build
-epicshelter_tested/dist
+# dir which represents remote_data
+remote_data/
+
