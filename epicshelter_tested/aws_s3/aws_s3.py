@@ -1,4 +1,6 @@
 import boto3
+from botocore.client import ClientError
+
 
 class S3():
 
@@ -6,12 +8,12 @@ class S3():
 
         self.client = boto3.client("s3")
 
-    def list_objects(self, bucket = None):
+    def list_objects(self, bucket=None):
 
         if bucket == None:
-            raise ValueError("Bucket is none")
-        
-        data = self.client.list_objects(bucket)
+            raise ValueError("Bucket is None!")
+
+        data = self.client.list_objects(Bucket=bucket)
 
         keys = []
 
