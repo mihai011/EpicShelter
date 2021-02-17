@@ -44,3 +44,11 @@ class S3Client():
             ret_object["Contents"].append(key_object.copy())
 
         return ret_object
+
+    def download_fileobj(self, Bucket=None, Key=None, fd=None):
+
+        with open(os.path.join(self.path,Key), "rb") as df:
+
+            fd.write(df.read())
+
+        return True

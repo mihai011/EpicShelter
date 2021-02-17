@@ -21,3 +21,17 @@ class S3():
             keys.append(k["Key"])
         
         return keys
+
+    def download_fileobj(self, Bucket=None,Key=None, target=None):
+
+        if Bucket == None:
+            raise ValueError("Bucket is None!")
+
+        if Key == None:
+            raise ValueError("Key is None!")
+
+        if target == None:
+            raise ValueError("Target is None!")
+
+        with open(target, "wb+") as data:
+            self.client.download_fileobj(Bucket, Key, data)
