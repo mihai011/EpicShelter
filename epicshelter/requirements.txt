@@ -35,4 +35,4 @@ smart-open==4.1.2
 termcolor==1.1.0
 tqdm==4.56.0
 uritemplate==3.0.1
-urllib3==1.26.3
+urllib3==1.26.5
